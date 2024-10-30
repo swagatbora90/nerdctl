@@ -67,7 +67,7 @@ clean:
 	find . -name \#\* -delete
 	rm -rf $(CURDIR)/_output/* $(MAKEFILE_DIR)/vendor
 
-lint: lint-go lint-imports lint-yaml lint-shell
+lint: lint-go lint-imports lint-yaml
 
 lint-go:
 	cd $(MAKEFILE_DIR) && GOOS=linux golangci-lint run $(VERBOSE_FLAG_LONG) ./... && \

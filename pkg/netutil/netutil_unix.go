@@ -43,6 +43,7 @@ import (
 const (
 	DefaultNetworkName = "bridge"
 	DefaultCIDR        = "10.4.0.0/24"
+	DefaultGatewayIP   = "10.4.0.1"
 	DefaultIPAMDriver  = "host-local"
 
 	// When creating non-default network without passing in `--subnet` option,

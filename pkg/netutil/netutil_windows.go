@@ -27,6 +27,7 @@ import (
 const (
 	DefaultNetworkName = "nat"
 	DefaultCIDR        = "10.4.0.0/24"
+	DefaultGatewayIP   = "10.4.0.1"
 
 	// When creating non-default network without passing in `--subnet` option,
 	// nerdctl assigns subnet address for the creation starting from `StartingCIDR`

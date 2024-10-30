@@ -180,9 +180,10 @@ func namespaceUsedNetworks(ctx context.Context, containers []containerd.Containe
 	return used, nil
 }
 
-func WithDefaultNetwork() CNIEnvOpt {
+func WithDefaultNetwork(bridgeIP string) CNIEnvOpt {
 	return func(e *CNIEnv) error {
-		return e.ensureDefaultNetworkConfig()
+		fmt.Printf("In default network with bridgeIP: %s", bridgeIP)
+		return e.ensureDefaultNetworkConfig(bridgeIP)
 	}
 }
 
@@ -406,31 +407,47 @@ func (e *CNIEnv) GetDefaultNetworkConfig() (*NetworkConfig, error) {
 	return nil, nil
 }
 
-func (e *CNIEnv) ensureDefaultNetworkConfig() error {
+func (e *CNIEnv) ensureDefaultNetworkConfig(bridgeIP string) error {
 	defaultNet, err := e.GetDefaultNetworkConfig()
 	if err != nil {
 		return fmt.Errorf("failed to check for default network: %s", err)
 	}
 	if defaultNet == nil {
-		if err := e.createDefaultNetworkConfig(); err != nil {
-			return fmt.Errorf("failed to create default network: %s", err)
+		fmt.Printf("create default network")
+		if err := e.createDefaultNetworkConfig(bridgeIP); err != nil {
+			return fmt.Errorf("failed to create default network with bridgeIp %s: %s", bridgeIP, err)
 		}
 	}
 	return nil
 }
 
-func (e *CNIEnv) createDefaultNetworkConfig() error {
+func (e *CNIEnv) createDefaultNetworkConfig(bridgeIP string) error {
+	fmt.Printf("In create network with bridgeIP: %s", bridgeIP)
 	filename := e.getConfigPathForNetworkName(DefaultNetworkName)
 	if _, err := os.Stat(filename); err == nil {
 		return fmt.Errorf("already found existing network config at %q, cannot create new network named %q", filename, DefaultNetworkName)
 	}
+
+	bridgeCIDR := DefaultCIDR
+	bridgeGatewayIP := DefaultGatewayIP
+	if bridgeIP != "" {
+		if bIP, bCIDR, err := net.ParseCIDR(bridgeIP); err != nil {
+			return fmt.Errorf("invalid bridge ip %s: %s", bridgeIP, err)
+		} else {
+			bridgeGatewayIP = bIP.String()
+			bridgeCIDR = bCIDR.String()
+		}
+	}
 	opts := types.NetworkCreateOptions{
 		Name:       DefaultNetworkName,
 		Driver:     DefaultNetworkName,
-		Subnets:    []string{DefaultCIDR},
+		Subnets:    []string{bridgeCIDR},
+		Gateway:    bridgeGatewayIP,
 		IPAMDriver: "default",
 		Labels:     []string{fmt.Sprintf("%s=true", labels.NerdctlDefaultNetwork)},
 	}
+
+	fmt.Printf("Network Create Options are: %v", opts)
 	_, err := e.CreateNetwork(opts)
 	if err != nil && !errdefs.IsAlreadyExists(err) {
 		return err
