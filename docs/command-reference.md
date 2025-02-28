@@ -414,7 +414,7 @@ IPFS flags:
 - :nerd_face: `--ipfs-address`: Multiaddr of IPFS API (default uses `$IPFS_PATH` env variable if defined or local directory `~/.ipfs`)
 
 Unimplemented `docker run` flags:
-    `--blkio-weight-device`, `--cpu-rt-*`, `--device-*`,
+    `--cpu-rt-*`, `--device-cgroup-rule`,
     `--disable-content-trust`, `--expose`, `--health-*`, `--isolation`, `--no-healthcheck`,
     `--link*`, `--publish-all`, `--storage-opt`,
     `--userns`, `--volume-driver`

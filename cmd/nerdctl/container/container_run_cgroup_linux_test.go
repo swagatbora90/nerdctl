@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/moby/sys/userns"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"gotest.tools/v3/assert"
 
 	"github.com/containerd/cgroups/v3"
@@ -420,4 +421,125 @@ func TestRunBlkioWeightCgroupV2(t *testing.T) {
 	base.Cmd("exec", containerName, "cat", "io.bfq.weight").AssertOutExactly("default 300\n")
 	base.Cmd("update", containerName, "--blkio-weight", "400").AssertOK()
 	base.Cmd("exec", containerName, "cat", "io.bfq.weight").AssertOutExactly("default 400\n")
+}
+
+func TestRunBlkioSettingCgroupV2(t *testing.T) {
+	t.Parallel()
+	testutil.DockerIncompatible(t)
+	if cgroups.Mode() != cgroups.Unified {
+		t.Skip("test requires cgroup v2")
+	}
+
+	// TODO: Fix logic to check if bfq is set as the scheduler for the block device
+	//
+	// if _, err := os.Stat("/sys/module/bfq"); err != nil {
+	// 	t.Skipf("test requires \"bfq\" module to be loaded: %v", err)
+	// }
+
+	base := testutil.NewBase(t)
+	info := base.Info()
+	switch info.CgroupDriver {
+	case "none", "":
+		t.Skip("test requires cgroup driver")
+	}
+
+	tests := []struct {
+		name     string
+		args     []string
+		validate func(t *testing.T, blockIO *specs.LinuxBlockIO)
+	}{
+		{
+			name: "blkio-weight",
+			args: []string{"--blkio-weight", "150"},
+			validate: func(t *testing.T, blockIO *specs.LinuxBlockIO) {
+				assert.Equal(t, uint16(150), *blockIO.Weight)
+			},
+		},
+		{
+			name: "blkio-weight-device",
+			args: []string{"--blkio-weight-device", "/dev/sda:100"},
+			validate: func(t *testing.T, blockIO *specs.LinuxBlockIO) {
+				assert.Equal(t, 1, len(blockIO.WeightDevice))
+				assert.Equal(t, uint16(100), *blockIO.WeightDevice[0].Weight)
+			},
+		},
+		{
+			name: "device-read-bps",
+			args: []string{"--device-read-bps", "/dev/sda:1048576"},
+			validate: func(t *testing.T, blockIO *specs.LinuxBlockIO) {
+				assert.Equal(t, 1, len(blockIO.ThrottleReadBpsDevice))
+				assert.Equal(t, uint64(1048576), blockIO.ThrottleReadBpsDevice[0].Rate)
+			},
+		},
+		{
+			name: "device-write-bps",
+			args: []string{"--device-write-bps", "/dev/sda:2097152"},
+			validate: func(t *testing.T, blockIO *specs.LinuxBlockIO) {
+				assert.Equal(t, 1, len(blockIO.ThrottleWriteBpsDevice))
+				assert.Equal(t, uint64(2097152), blockIO.ThrottleWriteBpsDevice[0].Rate)
+			},
+		},
+		{
+			name: "device-read-iops",
+			args: []string{"--device-read-iops", "/dev/sda:1000"},
+			validate: func(t *testing.T, blockIO *specs.LinuxBlockIO) {
+				assert.Equal(t, 1, len(blockIO.ThrottleReadIOPSDevice))
+				assert.Equal(t, uint64(1000), blockIO.ThrottleReadIOPSDevice[0].Rate)
+			},
+		},
+		{
+			name: "device-write-iops",
+			args: []string{"--device-write-iops", "/dev/sda:2000"},
+			validate: func(t *testing.T, blockIO *specs.LinuxBlockIO) {
+				assert.Equal(t, 1, len(blockIO.ThrottleWriteIOPSDevice))
+				assert.Equal(t, uint64(2000), blockIO.ThrottleWriteIOPSDevice[0].Rate)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt // capture range variable
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			containerName := testutil.Identifier(t)
+
+			args := []string{"run", "-d", "--name", containerName}
+			args = append(args, tt.args...)
+			args = append(args, testutil.AlpineImage, "sleep", "infinity")
+			base.Cmd(args...).AssertOK()
+			t.Cleanup(func() {
+				base.Cmd("rm", "-f", containerName).Run()
+			})
+
+			// Connect to containerd
+			addr := base.ContainerdAddress()
+			client, err := containerd.New(addr, containerd.WithDefaultNamespace(testutil.Namespace))
+			assert.NilError(t, err)
+			ctx := context.Background()
+
+			// Get container ID
+			var cid string
+			walker := &containerwalker.ContainerWalker{
+				Client: client,
+				OnFound: func(ctx context.Context, found containerwalker.Found) error {
+					if found.MatchCount > 1 {
+						return fmt.Errorf("multiple IDs found with provided prefix: %s", found.Req)
+					}
+					cid = found.Container.ID()
+					return nil
+				},
+			}
+			err = walker.WalkAll(ctx, []string{containerName}, true)
+			assert.NilError(t, err)
+
+			// Get container spec
+			container, err := client.LoadContainer(ctx, cid)
+			assert.NilError(t, err)
+			spec, err := container.Spec(ctx)
+			assert.NilError(t, err)
+
+			// Run the validation function
+			tt.validate(t, spec.Linux.Resources.BlockIO)
+		})
+	}
 }
