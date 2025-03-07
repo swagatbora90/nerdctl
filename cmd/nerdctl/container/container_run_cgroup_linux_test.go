@@ -549,6 +549,8 @@ func TestRunBlkioSettingCgroupV2(t *testing.T) {
 						func(stdout string, info string, t *testing.T) {
 							inspectOut := helpers.Capture("inspect", "--format", "{{range .HostConfig.BlkioWeightDevice}}{{.Weight}}{{end}}", data.Identifier())
 							t.Logf("inspectOut value: %q", inspectOut)
+							fullInspect := helpers.Capture("inspect", data.Identifier())
+							t.Logf("Full inspet  output: %s", fullInspect)
 							assert.Assert(t, strings.Contains(inspectOut, "100"))
 						},
 					),
@@ -573,6 +575,8 @@ func TestRunBlkioSettingCgroupV2(t *testing.T) {
 						func(stdout string, info string, t *testing.T) {
 							inspectOut := helpers.Capture("inspect", "--format", "{{range .HostConfig.BlkioDeviceReadBps}}{{.Rate}}{{end}}", data.Identifier())
 							t.Logf("inspectOut value: %q", inspectOut)
+							fullInspect := helpers.Capture("inspect", data.Identifier())
+							t.Logf("Full inspet  output: %s", fullInspect)
 							assert.Assert(t, strings.Contains(inspectOut, "1048576"))
 						},
 					),
@@ -597,6 +601,8 @@ func TestRunBlkioSettingCgroupV2(t *testing.T) {
 						func(stdout string, info string, t *testing.T) {
 							inspectOut := helpers.Capture("inspect", "--format", "{{range .HostConfig.BlkioDeviceWriteBps}}{{.Rate}}{{end}}", data.Identifier())
 							t.Logf("inspectOut value: %q", inspectOut)
+							fullInspect := helpers.Capture("inspect", data.Identifier())
+							t.Logf("Full inspet  output: %s", fullInspect)
 							assert.Assert(t, strings.Contains(inspectOut, "2097152"))
 						},
 					),
@@ -621,6 +627,8 @@ func TestRunBlkioSettingCgroupV2(t *testing.T) {
 						func(stdout string, info string, t *testing.T) {
 							inspectOut := helpers.Capture("inspect", "--format", "{{range .HostConfig.BlkioDeviceReadIOps}}{{.Rate}}{{end}}", data.Identifier())
 							t.Logf("inspectOut value: %q", inspectOut)
+							fullInspect := helpers.Capture("inspect", data.Identifier())
+							t.Logf("Full inspet  output: %s", fullInspect)
 							assert.Assert(t, strings.Contains(inspectOut, "1000"))
 						},
 					),
@@ -645,6 +653,8 @@ func TestRunBlkioSettingCgroupV2(t *testing.T) {
 						func(stdout string, info string, t *testing.T) {
 							inspectOut := helpers.Capture("inspect", "--format", "{{range .HostConfig.BlkioDeviceWriteIOps}}{{.Rate}}{{end}}", data.Identifier())
 							t.Logf("inspectOut value: %q", inspectOut)
+							fullInspect := helpers.Capture("inspect", data.Identifier())
+							t.Logf("Full inspet  output: %s", fullInspect)
 							assert.Assert(t, strings.Contains(inspectOut, "2000"))
 						},
 					),
