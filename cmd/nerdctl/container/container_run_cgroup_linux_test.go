@@ -527,6 +527,8 @@ func TestRunBlkioSettingCgroupV2(t *testing.T) {
 						func(stdout string, info string, t *testing.T) {
 							t.Logf("full command stdout: %s", stdout)
 							t.Logf("full command info: %s", info)
+							fullInspect := helpers.Capture("inspect", data.Identifier())
+							t.Logf("Full inspet  output: %s", fullInspect)
 							assert.Assert(t, strings.Contains(helpers.Capture("inspect", "--format", "{{.HostConfig.BlkioWeight}}", data.Identifier()), "150"))
 						},
 					),
