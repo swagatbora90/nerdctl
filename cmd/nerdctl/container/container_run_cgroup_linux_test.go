@@ -526,6 +526,8 @@ func TestRunBlkioSettingCgroupV2(t *testing.T) {
 						// },
 						func(stdout string, info string, t *testing.T) {
 							assert.Assert(t, strings.Contains(helpers.Capture("inspect", "--format", "{{.HostConfig.BlkioWeight}}", data.Identifier()), "150"))
+							t.Logf("full command stdout: %s", stdout)
+							t.Logf("full command info: %s", info)
 						},
 					),
 				}
@@ -552,6 +554,8 @@ func TestRunBlkioSettingCgroupV2(t *testing.T) {
 							fullInspect := helpers.Capture("inspect", data.Identifier())
 							t.Logf("Full inspet  output: %s", fullInspect)
 							assert.Assert(t, strings.Contains(inspectOut, "100"))
+							t.Logf("full command stdout: %s", stdout)
+							t.Logf("full command info: %s", stdout)
 						},
 					),
 				}
@@ -578,6 +582,8 @@ func TestRunBlkioSettingCgroupV2(t *testing.T) {
 							fullInspect := helpers.Capture("inspect", data.Identifier())
 							t.Logf("Full inspet  output: %s", fullInspect)
 							assert.Assert(t, strings.Contains(inspectOut, "1048576"))
+							t.Logf("full command stdout: %s", stdout)
+							t.Logf("full command info: %s", info)
 						},
 					),
 				}
@@ -604,6 +610,8 @@ func TestRunBlkioSettingCgroupV2(t *testing.T) {
 							fullInspect := helpers.Capture("inspect", data.Identifier())
 							t.Logf("Full inspet  output: %s", fullInspect)
 							assert.Assert(t, strings.Contains(inspectOut, "2097152"))
+							t.Logf("full command stdout: %s", stdout)
+							t.Logf("full command info: %s", info)
 						},
 					),
 				}
@@ -630,6 +638,8 @@ func TestRunBlkioSettingCgroupV2(t *testing.T) {
 							fullInspect := helpers.Capture("inspect", data.Identifier())
 							t.Logf("Full inspet  output: %s", fullInspect)
 							assert.Assert(t, strings.Contains(inspectOut, "1000"))
+							t.Logf("full command stdout: %s", stdout)
+							t.Logf("full command info: %s", info)
 						},
 					),
 				}
@@ -656,6 +666,8 @@ func TestRunBlkioSettingCgroupV2(t *testing.T) {
 							fullInspect := helpers.Capture("inspect", data.Identifier())
 							t.Logf("Full inspet  output: %s", fullInspect)
 							assert.Assert(t, strings.Contains(inspectOut, "2000"))
+							t.Logf("full command stdout: %s", stdout)
+							t.Logf("full command info: %s", info)
 						},
 					),
 				}
