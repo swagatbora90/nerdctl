@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -481,14 +482,37 @@ func TestRunBlkioWeightCgroupV2(t *testing.T) {
 
 func TestRunBlkioSettingCgroupV2(t *testing.T) {
 	testCase := nerdtest.Setup()
+	testCase.Require = nerdtest.Rootful
+
+	// Create dummy device path
+	dummyDev := "/dev/dummy-zero"
+
+	testCase.Setup = func(data test.Data, helpers test.Helpers) {
+		// Create dummy device
+		helperCmd := exec.Command("mknod", dummyDev, "c", "1", "5")
+		if out, err := helperCmd.CombinedOutput(); err != nil {
+			t.Fatalf("cannot create %q: %q: %v", dummyDev, string(out), err)
+		}
+	}
+
+	testCase.Cleanup = func(data test.Data, helpers test.Helpers) {
+		// Clean up the dummy device
+		if err := exec.Command("rm", "-f", dummyDev).Run(); err != nil {
+			t.Logf("failed to remove device %s: %v", dummyDev, err)
+		}
+	}
 
 	testCase.SubTests = []*test.Case{
 		{
 			Description: "blkio-weight",
+			Require:     nerdtest.CGroupV2,
 			Command: func(data test.Data, helpers test.Helpers) test.TestableCommand {
 				return helpers.Command("run", "-d", "--name", data.Identifier(),
 					"--blkio-weight", "150",
 					testutil.AlpineImage, "sleep", "infinity")
+			},
+			Cleanup: func(data test.Data, helpers test.Helpers) {
+				helpers.Anyhow("rm", "-f", data.Identifier())
 			},
 			Expected: func(data test.Data, helpers test.Helpers) *test.Expected {
 				return &test.Expected{
@@ -506,8 +530,11 @@ func TestRunBlkioSettingCgroupV2(t *testing.T) {
 			Require:     nerdtest.CGroupV2,
 			Command: func(data test.Data, helpers test.Helpers) test.TestableCommand {
 				return helpers.Command("run", "-d", "--name", data.Identifier(),
-					"--blkio-weight-device", "/dev/sda:100",
+					"--blkio-weight-device", dummyDev+":100",
 					testutil.AlpineImage, "sleep", "infinity")
+			},
+			Cleanup: func(data test.Data, helpers test.Helpers) {
+				helpers.Anyhow("rm", "-f", data.Identifier())
 			},
 			Expected: func(data test.Data, helpers test.Helpers) *test.Expected {
 				return &test.Expected{
@@ -523,11 +550,20 @@ func TestRunBlkioSettingCgroupV2(t *testing.T) {
 		},
 		{
 			Description: "device-read-bps",
-			Require:     nerdtest.CGroupV2,
+			Require: require.All(
+				nerdtest.CGroupV2,
+				// Docker cli (v26.1.3) available in github runners has a bug where some of the blkio options
+				// do not work https://github.com/docker/cli/issues/5321. The fix has been merged to the latest releases
+				// but not currently available in the v26 release.
+				require.Not(nerdtest.Docker),
+			),
 			Command: func(data test.Data, helpers test.Helpers) test.TestableCommand {
 				return helpers.Command("run", "-d", "--name", data.Identifier(),
-					"--device-read-bps", "/dev/sda:1048576",
+					"--device-read-bps", dummyDev+":1048576",
 					testutil.AlpineImage, "sleep", "infinity")
+			},
+			Cleanup: func(data test.Data, helpers test.Helpers) {
+				helpers.Anyhow("rm", "-f", data.Identifier())
 			},
 			Expected: func(data test.Data, helpers test.Helpers) *test.Expected {
 				return &test.Expected{
@@ -543,11 +579,20 @@ func TestRunBlkioSettingCgroupV2(t *testing.T) {
 		},
 		{
 			Description: "device-write-bps",
-			Require:     nerdtest.CGroupV2,
+			Require: require.All(
+				nerdtest.CGroupV2,
+				// Docker cli (v26.1.3) available in github runners has a bug where some of the blkio options
+				// do not work https://github.com/docker/cli/issues/5321. The fix has been merged to the latest releases
+				// but not currently available in the v26 release.
+				require.Not(nerdtest.Docker),
+			),
 			Command: func(data test.Data, helpers test.Helpers) test.TestableCommand {
 				return helpers.Command("run", "-d", "--name", data.Identifier(),
-					"--device-write-bps", "/dev/sda:2097152",
+					"--device-write-bps", dummyDev+":2097152",
 					testutil.AlpineImage, "sleep", "infinity")
+			},
+			Cleanup: func(data test.Data, helpers test.Helpers) {
+				helpers.Anyhow("rm", "-f", data.Identifier())
 			},
 			Expected: func(data test.Data, helpers test.Helpers) *test.Expected {
 				return &test.Expected{
@@ -563,11 +608,20 @@ func TestRunBlkioSettingCgroupV2(t *testing.T) {
 		},
 		{
 			Description: "device-read-iops",
-			Require:     nerdtest.CGroupV2,
+			Require: require.All(
+				nerdtest.CGroupV2,
+				// Docker cli (v26.1.3) available in github runners has a bug where some of the blkio options
+				// do not work https://github.com/docker/cli/issues/5321. The fix has been merged to the latest releases
+				// but not currently available in the v26 release.
+				require.Not(nerdtest.Docker),
+			),
 			Command: func(data test.Data, helpers test.Helpers) test.TestableCommand {
 				return helpers.Command("run", "-d", "--name", data.Identifier(),
-					"--device-read-iops", "/dev/sda:1000",
+					"--device-read-iops", dummyDev+":1000",
 					testutil.AlpineImage, "sleep", "infinity")
+			},
+			Cleanup: func(data test.Data, helpers test.Helpers) {
+				helpers.Anyhow("rm", "-f", data.Identifier())
 			},
 			Expected: func(data test.Data, helpers test.Helpers) *test.Expected {
 				return &test.Expected{
@@ -583,11 +637,20 @@ func TestRunBlkioSettingCgroupV2(t *testing.T) {
 		},
 		{
 			Description: "device-write-iops",
-			Require:     nerdtest.CGroupV2,
+			Require: require.All(
+				nerdtest.CGroupV2,
+				// Docker cli (v26.1.3) available in github runners has a bug where some of the blkio options
+				// do not work https://github.com/docker/cli/issues/5321. The fix has been merged to the latest releases
+				// but not currently available in the v26 release.
+				require.Not(nerdtest.Docker),
+			),
 			Command: func(data test.Data, helpers test.Helpers) test.TestableCommand {
 				return helpers.Command("run", "-d", "--name", data.Identifier(),
-					"--device-write-iops", "/dev/sda:2000",
+					"--device-write-iops", dummyDev+":2000",
 					testutil.AlpineImage, "sleep", "infinity")
+			},
+			Cleanup: func(data test.Data, helpers test.Helpers) {
+				helpers.Anyhow("rm", "-f", data.Identifier())
 			},
 			Expected: func(data test.Data, helpers test.Helpers) *test.Expected {
 				return &test.Expected{
