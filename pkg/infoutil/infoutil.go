@@ -262,8 +262,6 @@ func BlockIOWeight(cgroupManager string) bool {
 
 // BlockIOWeightDevice returns whether Block IO weight device is supported or not
 func BlockIOWeightDevice(cgroupManager string) bool {
-	// blkio weight is not available on cgroup v1 since kernel 5.0.
-	// On cgroup v2, blkio weight is implemented using io.weight
 	return getMobySysInfo(cgroupManager).BlkioWeightDevice
 }
 
