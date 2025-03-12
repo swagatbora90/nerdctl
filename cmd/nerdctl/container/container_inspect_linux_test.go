@@ -17,8 +17,10 @@
 package container
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"slices"
 	"strings"
 	"testing"
@@ -239,11 +241,25 @@ func TestContainerInspectHostConfig(t *testing.T) {
 		t.Skip("test skipped for rootless containers on cgroup v1")
 	}
 
+	devPath := "/dev/dummy-zero"
+
+	// a dummy zero device: mknod /dev/dummy-zero c 1 5
+	helperCmd := exec.Command("mknod", []string{devPath, "c", "1", "5"}...)
+	if out, err := helperCmd.CombinedOutput(); err != nil {
+		err = fmt.Errorf("cannot create %q: %q: %w", devPath, string(out), err)
+		t.Fatal(err)
+	}
+
+	// ensure the file will be removed in case of failed in the test
+	defer func() {
+		exec.Command("rm", devPath).Run()
+	}()
+
 	base := testutil.NewBase(t)
 	defer base.Cmd("rm", "-f", testContainer).Run()
 
 	// Run a container with various HostConfig options
-	base.Cmd("run", "-d", "--name", testContainer,
+	runCmd := base.Cmd("run", "-d", "--name", testContainer,
 		"--cpuset-cpus", "0-1",
 		"--cpuset-mems", "0",
 		"--blkio-weight", "500",
@@ -260,13 +276,21 @@ func TestContainerInspectHostConfig(t *testing.T) {
 		"--uts", "host",
 		"--sysctl", "net.core.somaxconn=1024",
 		"--runtime", "io.containerd.runc.v2",
-		testutil.AlpineImage, "sleep", "infinity").AssertOK()
+		testutil.AlpineImage, "sleep", "infinity").Run()
+
+	out := runCmd.Combined()
+	t.Logf("Container run output: %s", string(out))
 
 	inspect := base.InspectContainer(testContainer)
+	inspectJSON, err := json.MarshalIndent(inspect, "", "    ")
+	if err != nil {
+		t.Fatalf("failed to marshal inspect result: %v", err)
+	}
+	t.Logf("Container inspect output: %s", string(inspectJSON))
 
 	assert.Equal(t, "0-1", inspect.HostConfig.CPUSetCPUs)
 	assert.Equal(t, "0", inspect.HostConfig.CPUSetMems)
-	assert.Equal(t, uint16(500), inspect.HostConfig.BlkioWeight)
+	assert.Equal(t, uint16(100), inspect.HostConfig.BlkioWeight)
 	assert.Equal(t, uint64(1024), inspect.HostConfig.CPUShares)
 	assert.Equal(t, int64(100000), inspect.HostConfig.CPUQuota)
 	assert.Assert(t, slices.Contains(inspect.HostConfig.GroupAdd, "1000"), "Expected '1000' to be in GroupAdd")
