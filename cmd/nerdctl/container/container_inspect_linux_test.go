@@ -289,7 +289,6 @@ func TestContainerInspectHostConfig(t *testing.T) {
 
 	assert.Equal(t, "0-1", inspect.HostConfig.CPUSetCPUs)
 	assert.Equal(t, "0", inspect.HostConfig.CPUSetMems)
-	assert.Equal(t, uint16(500), inspect.HostConfig.BlkioWeight)
 	assert.Equal(t, uint64(1024), inspect.HostConfig.CPUShares)
 	assert.Equal(t, int64(100000), inspect.HostConfig.CPUQuota)
 	assert.Assert(t, slices.Contains(inspect.HostConfig.GroupAdd, "1000"), "Expected '1000' to be in GroupAdd")
@@ -522,6 +521,11 @@ func TestContainerInspectBlkioSettings(t *testing.T) {
 		testutil.AlpineImage, "sleep", "infinity").AssertOK()
 
 	inspect := base.InspectContainer(testContainer)
+	inspectJSON, err := json.MarshalIndent(inspect, "", "    ")
+	if err != nil {
+		t.Fatalf("failed to marshal inspect result: %v", err)
+	}
+	t.Logf("Container inspect output: %s", string(inspectJSON))
 
 	assert.Equal(t, uint16(500), inspect.HostConfig.BlkioWeight)
 	assert.Equal(t, 1, len(inspect.HostConfig.BlkioWeightDevice))
