@@ -947,6 +947,13 @@ func getBlkioSettingsFromSpec(spec *specs.Spec, hostConfig *HostConfig) error {
 		return fmt.Errorf("hostConfig cannot be nil")
 	}
 
+	// Initialize empty arrays by default
+	hostConfig.BlkioWeightDevice = make([]*specs.LinuxWeightDevice, 0)
+	hostConfig.BlkioDeviceReadBps = make([]*specs.LinuxThrottleDevice, 0)
+	hostConfig.BlkioDeviceWriteBps = make([]*specs.LinuxThrottleDevice, 0)
+	hostConfig.BlkioDeviceReadIOps = make([]*specs.LinuxThrottleDevice, 0)
+	hostConfig.BlkioDeviceWriteIOps = make([]*specs.LinuxThrottleDevice, 0)
+
 	if spec.Linux == nil || spec.Linux.Resources == nil || spec.Linux.Resources.BlockIO == nil {
 		return nil
 	}
