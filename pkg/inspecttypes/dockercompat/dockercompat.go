@@ -959,7 +959,7 @@ func getBlkioSettingsFromSpec(spec *specs.Spec, hostConfig *HostConfig) error {
 	}
 
 	// Initialize empty arrays by default
-	hostConfig.LinuxBlkioSettings := getDefaultLinuxBlkioSettings()
+	hostConfig.LinuxBlkioSettings = getDefaultLinuxBlkioSettings()
 
 	if spec.Linux == nil || spec.Linux.Resources == nil || spec.Linux.Resources.BlockIO == nil {
 		return nil
