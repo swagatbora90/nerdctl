@@ -241,20 +241,6 @@ func TestContainerInspectHostConfig(t *testing.T) {
 		t.Skip("test skipped for rootless containers on cgroup v1")
 	}
 
-	devPath := "/dev/dummy-zero"
-
-	// a dummy zero device: mknod /dev/dummy-zero c 1 5
-	helperCmd := exec.Command("mknod", []string{devPath, "c", "1", "5"}...)
-	if out, err := helperCmd.CombinedOutput(); err != nil {
-		err = fmt.Errorf("cannot create %q: %q: %w", devPath, string(out), err)
-		t.Fatal(err)
-	}
-
-	// ensure the file will be removed in case of failed in the test
-	defer func() {
-		exec.Command("rm", devPath).Run()
-	}()
-
 	base := testutil.NewBase(t)
 	defer base.Cmd("rm", "-f", testContainer).Run()
 
@@ -484,6 +470,7 @@ func TestContainerInspectDevices(t *testing.T) {
 }
 
 func TestContainerInspectBlkioSettings(t *testing.T) {
+	testutil.DockerIncompatible(t)
 	testContainer := testutil.Identifier(t)
 	// Some of the blkio settings are not supported in cgroup v1.
 	// So skip this test if running on cgroup v1
