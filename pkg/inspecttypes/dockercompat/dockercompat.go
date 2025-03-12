@@ -939,6 +939,17 @@ func ParseMountProperties(option []string) (rw bool, propagation string) {
 	return
 }
 
+func getDefaultLinuxBlkioSettings() LinuxBlkioSettings {
+	return LinuxBlkioSettings{
+		BlkioWeight:          0,
+		BlkioWeightDevice:    make([]*specs.LinuxWeightDevice, 0),
+		BlkioDeviceReadBps:   make([]*specs.LinuxThrottleDevice, 0),
+		BlkioDeviceWriteBps:  make([]*specs.LinuxThrottleDevice, 0),
+		BlkioDeviceReadIOps:  make([]*specs.LinuxThrottleDevice, 0),
+		BlkioDeviceWriteIOps: make([]*specs.LinuxThrottleDevice, 0),
+	}
+}
+
 func getBlkioSettingsFromSpec(spec *specs.Spec, hostConfig *HostConfig) error {
 	if spec == nil {
 		return fmt.Errorf("spec cannot be nil")
@@ -948,11 +959,7 @@ func getBlkioSettingsFromSpec(spec *specs.Spec, hostConfig *HostConfig) error {
 	}
 
 	// Initialize empty arrays by default
-	hostConfig.BlkioWeightDevice = make([]*specs.LinuxWeightDevice, 0)
-	hostConfig.BlkioDeviceReadBps = make([]*specs.LinuxThrottleDevice, 0)
-	hostConfig.BlkioDeviceWriteBps = make([]*specs.LinuxThrottleDevice, 0)
-	hostConfig.BlkioDeviceReadIOps = make([]*specs.LinuxThrottleDevice, 0)
-	hostConfig.BlkioDeviceWriteIOps = make([]*specs.LinuxThrottleDevice, 0)
+	hostConfig.LinuxBlkioSettings := getDefaultLinuxBlkioSettings()
 
 	if spec.Linux == nil || spec.Linux.Resources == nil || spec.Linux.Resources.BlockIO == nil {
 		return nil
