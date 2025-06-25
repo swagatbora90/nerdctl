@@ -996,3 +996,136 @@ func TestHostNetworkDnsConfigs(t *testing.T) {
 	}
 	testCase.Run(t)
 }
+
+func TestDNSWithGlobalConfig(t *testing.T) {
+	configContent := `debug = false
+debug_full = false
+dns = ["10.10.10.10", "20.20.20.20"]
+dns_opts = ["ndots:2", "timeout:5"]
+dns_search = ["example.com", "test.local"]`
+	tomlPath := filepath.Join(t.TempDir(), "nerdctl.toml")
+	os.WriteFile(tomlPath, []byte(configContent), 0644)
+
+	nerdtest.Setup()
+
+	testCase := &test.Case{
+		Env: map[string]string{"NERDCTL_TOML": tomlPath},
+		// NERDCTL_TOML not supported in Docker
+		Require: require.Not(nerdtest.Docker),
+		SubTests: []*test.Case{
+			{
+				Description: "Global DNS settings are used when command line options are not provided",
+				Command: func(data test.Data, helpers test.Helpers) test.TestableCommand {
+					nerdctlTomlPath := os.Getenv("NERDCTL_TOML")
+					if nerdctlTomlPath != "" {
+						if content, err := os.ReadFile(nerdctlTomlPath); err == nil {
+							helpers.T().Log("NERDCTL_TOML file content:\n%s", string(content))
+						} else {
+							helpers.T().Log("Failed to read NERDCTL_TOML file: %v", err)
+						}
+					}
+
+					cmd := helpers.Command("run", "--rm", testutil.CommonImage, "cat", "/etc/resolv.conf")
+					return cmd
+				},
+				Expected: func(data test.Data, helpers test.Helpers) *test.Expected {
+					return &test.Expected{
+						ExitCode: 0,
+						Output: func(stdout string, t tig.T) {
+							assert.Assert(t, strings.Contains(stdout, "nameserver 10.10.10.10"))
+							assert.Assert(t, strings.Contains(stdout, "nameserver 20.20.20.20"))
+							assert.Assert(t, strings.Contains(stdout, "search example.com test.local"))
+							assert.Assert(t, strings.Contains(stdout, "options ndots:2 timeout:5"))
+						},
+					}
+				},
+			},
+			{
+				Description: "Command line DNS options override global config",
+				Env:         map[string]string{"NERDCTL_TOML": tomlPath},
+				Command: func(data test.Data, helpers test.Helpers) test.TestableCommand {
+					nerdctlTomlPath := os.Getenv("NERDCTL_TOML")
+					if nerdctlTomlPath != "" {
+						if content, err := os.ReadFile(nerdctlTomlPath); err == nil {
+							helpers.T().Log("NERDCTL_TOML file content:\n%s", string(content))
+						} else {
+							helpers.T().Log("Failed to read NERDCTL_TOML file: %v", err)
+						}
+					}
+					cmd := helpers.Command("run", "--rm",
+						"--dns", "9.9.9.9",
+						"--dns-search", "override.com",
+						"--dns-opt", "ndots:3",
+						testutil.CommonImage, "cat", "/etc/resolv.conf")
+					return cmd
+				},
+				Expected: func(data test.Data, helpers test.Helpers) *test.Expected {
+					return &test.Expected{
+						ExitCode: 0,
+						Output: func(stdout string, t tig.T) {
+							assert.Assert(t, strings.Contains(stdout, "nameserver 9.9.9.9"))
+							assert.Assert(t, strings.Contains(stdout, "search override.com"))
+							assert.Assert(t, strings.Contains(stdout, "options ndots:3"))
+						},
+					}
+				},
+			},
+			{
+				Description: "Global DNS settings should also apply when using host network",
+				Env:         map[string]string{"NERDCTL_TOML": tomlPath},
+				Command: func(data test.Data, helpers test.Helpers) test.TestableCommand {
+					nerdctlTomlPath := os.Getenv("NERDCTL_TOML")
+					if nerdctlTomlPath != "" {
+						if content, err := os.ReadFile(nerdctlTomlPath); err == nil {
+							helpers.T().Log("NERDCTL_TOML file content:\n%s", string(content))
+						} else {
+							helpers.T().Log("Failed to read NERDCTL_TOML file: %v", err)
+						}
+					}
+					cmd := helpers.Command("run", "--rm", "--network", "host",
+						testutil.CommonImage, "cat", "/etc/resolv.conf")
+					return cmd
+				},
+				Expected: func(data test.Data, helpers test.Helpers) *test.Expected {
+					return &test.Expected{
+						ExitCode: 0,
+						Output: func(stdout string, t tig.T) {
+							assert.Assert(t, strings.Contains(stdout, "nameserver 10.10.10.10"))
+							assert.Assert(t, strings.Contains(stdout, "nameserver 20.20.20.20"))
+							assert.Assert(t, strings.Contains(stdout, "search example.com test.local"))
+							assert.Assert(t, strings.Contains(stdout, "options ndots:2 timeout:5"))
+						},
+					}
+				},
+			},
+			{
+				Description: "Global DNS settings should also apply when using none network",
+				Env:         map[string]string{"NERDCTL_TOML": tomlPath},
+				Command: func(data test.Data, helpers test.Helpers) test.TestableCommand {
+					nerdctlTomlPath := os.Getenv("NERDCTL_TOML")
+					if nerdctlTomlPath != "" {
+						if content, err := os.ReadFile(nerdctlTomlPath); err == nil {
+							helpers.T().Log("NERDCTL_TOML file content:\n%s", string(content))
+						} else {
+							helpers.T().Log("Failed to read NERDCTL_TOML file: %v", err)
+						}
+					}
+					cmd := helpers.Command("run", "--rm", "--network", "none",
+						testutil.CommonImage, "cat", "/etc/resolv.conf")
+					return cmd
+				},
+				Expected: func(data test.Data, helpers test.Helpers) *test.Expected {
+					return &test.Expected{
+						Output: func(stdout string, t tig.T) {
+							assert.Assert(t, strings.Contains(stdout, "nameserver 10.10.10.10"))
+							assert.Assert(t, strings.Contains(stdout, "nameserver 20.20.20.20"))
+							assert.Assert(t, strings.Contains(stdout, "search example.com test.local"))
+							assert.Assert(t, strings.Contains(stdout, "options ndots:2 timeout:5"))
+						},
+					}
+				},
+			},
+		},
+	}
+	testCase.Run(t)
+}
