@@ -66,6 +66,12 @@ jobs:
           lima sudo dnf -q -y install docker-ce --nobest
           lima sudo systemctl enable --now docker
 
+      - name: "Init: install br-netfilter in guest VM"
+        run: |
+          # This ensures that bridged traffic goes through netfilter
+          lima sudo dnf -q -y install nftables
+          lima sudo modprobe br-netfilter
+
       - name: "Init: configure the host to use dockerd in the guest VM"
         run: |
           set -eux
