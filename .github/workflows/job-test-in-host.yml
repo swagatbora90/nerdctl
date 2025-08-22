@@ -156,10 +156,6 @@ jobs:
           sudo apt-get install -qq expect
           echo "::endgroup::"
 
-          # This ensures that bridged traffic goes through netfilter
-          sudo apt-get install -qq nftables
-          sudo modprobe br-netfilter
-
       - if: ${{ contains(inputs.runner, 'windows') && env.SHOULD_RUN == 'yes' }}
         name: "Init (windows): prepare host"
         env:
